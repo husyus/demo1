@@ -1,5 +1,6 @@
 <script setup>
 import { RouterView } from "vue-router";
+console.log('github 命令测试')
 </script>
 
 <template>
