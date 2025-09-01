@@ -6,10 +6,10 @@
           <el-icon><IconEpBack /></el-icon>
         </span>
         <span class="radio-btn">
-          <el-icon v-show="!playerStore.playing" @click="playerControl('start')"
+          <el-icon v-show="player.paused" @click="playerControl('start')"
             ><IconEpVideoPlay
           /></el-icon>
-          <el-icon v-show="playerStore.playing" @click="playerControl('start')"
+          <el-icon v-show="!player.paused" @click="playerControl('start')"
             ><IconEpVideoPause
           /></el-icon>
         </span>
@@ -18,35 +18,86 @@
         </span>
       </div>
       <div class="progress-bar">
-        <div class="program-time">3:04</div>
-        <div class="bar">
+        <div class="program-time">
+          <div class="audio-title">{{ playerStore.fileObj?.fileName }}</div>
+          <div class="time-text">
+            <span>{{ currentTime }}</span
+            >/
+            <span>{{ durationTime }}</span>
+          </div>
+        </div>
+        <div class="bar" @click="clickBar($event)">
           <el-progress
-            :text-inside="true"
             :stroke-width="10"
             :percentage="playerStore.progress"
+            :show-text="false"
           />
         </div>
       </div>
       <div class="player-list">
-        <el-icon><IconEpDocument /></el-icon>
+        <el-icon @click="addAudio"><IconEpDocument /></el-icon>
       </div>
+    </div>
+    <div>
+      <audio
+        ref="player"
+        controls
+        v-if="playerStore.fileObj"
+        :src="playerStore.fileObj.dataUrl"
+        @timeupdate="updateProgress"
+        @loadedmetadata="fileLoaded"
+      ></audio>
     </div>
   </div>
 </template>
 
 <script setup>
 import { ref } from "vue";
-import { usePlayerStore } from "@/store";
-const playerStore = usePlayerStore();
+import { usePlayerStore, usePlayerListStore } from "@/store";
+import { formSecondToMS } from "@/utils/former";
 
+const playerStore = usePlayerStore();
+const playerListStore = usePlayerListStore();
+const player = ref(new Audio());
+const currentTime = ref("");
+const durationTime = ref("");
 const playerControl = (kind) => {
   switch (kind) {
     case "start":
-      playerStore.setPlayering();
+      player.value.paused ? player.value.play() : player.value.pause();
       break;
 
     default:
       break;
+  }
+};
+
+const clickBar = (e) => {
+  const bar = document.getElementsByClassName("bar")[0];
+  let percentOfClick = (e.offsetX / bar.offsetWidth) * 100;
+  playerStore.setProgress(percentOfClick.toFixed(2) * 1);
+};
+
+const updateProgress = () => {
+  let progress = (player.value.currentTime / player.value.duration) * 100;
+  playerStore.setProgress(progress.toFixed(2) * 1);
+  currentTime.value = formSecondToMS(player.value.currentTime);
+};
+
+const fileLoaded = () => {
+  currentTime.value = formSecondToMS(player.value.currentTime);
+  durationTime.value = formSecondToMS(player.value.duration);
+};
+const addAudio = async () => {
+  const result = await window.electronAudio.selectAndPlay();
+  if (result?.error) {
+    console.log(result.error);
+    return;
+  }
+  if (result.blobUrl) {
+    console.log(result);
+    // playerStore.setAudioUrl(result);
+    playerListStore.updatePlayerList(result);
   }
 };
 </script>
@@ -101,8 +152,19 @@ const playerControl = (kind) => {
       flex: 1;
       .program-time {
         color: #fff;
-        font-size: 12px;
-        text-align: right;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        .audio-title {
+          font-size: 13px;
+          flex: 1;
+          text-align: left;
+        }
+        .time-text {
+          width: 120px;
+          font-size: 12px;
+          text-align: right;
+        }
       }
       .bar {
       }
@@ -115,6 +177,9 @@ const playerControl = (kind) => {
       align-items: center;
       font-size: 26px;
       color: #fff;
+      :deep(.el-icon) {
+        cursor: pointer;
+      }
     }
   }
 }

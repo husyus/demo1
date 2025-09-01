@@ -20,13 +20,42 @@ export const usePlayerStore = defineStore("playerStore", {
   state() {
     return {
       playing: false,
-      progress: 100,
+      progress: 0,
+      fileObj: {
+        blobUrl: "",
+        fileName: "",
+        fileType: "",
+        dataUrl: "",
+      },
     };
   },
   actions: {
     setPlayering() {
-      console.log(1);
       this.playing = !this.playing;
+    },
+    setProgress(data) {
+      this.progress = data;
+    },
+    setAudioUrl(data) {
+      console.log(data);
+      this.fileObj = { ...data };
+    },
+  },
+});
+
+export const usePlayerListStore = defineStore("playerListStore", {
+  state() {
+    return {
+      list: [],
+      targetIndex: 0,
+    };
+  },
+  actions: {
+    updatePlayerList(data) {
+      this.list.push(data);
+    },
+    chooseAudioFile(data) {
+      this.targetIndex = data;
     },
   },
 });
